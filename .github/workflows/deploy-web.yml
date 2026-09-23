@@ -1,0 +1,63 @@
+name: Deploy web to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - 'packages/contracts/**'
+      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --include=dev
+
+      - name: Build web app for GitHub Pages
+        env:
+          GITHUB_PAGES: 'true'
+          # Points the deployed preview at nothing until a real backend is
+          # hosted — login/incidents features stay non-functional but the
+          # UI itself is browsable. Update this once the API has a home.
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'http://localhost:4000/api' }}
+          VITE_SOCKET_URL: ${{ vars.VITE_SOCKET_URL || 'http://localhost:4000' }}
+        run: npm run build --workspace apps/web
+
+      # GitHub Pages has no SPA fallback: a direct hit on /incidents 404s
+      # unless 404.html exists and re-serves the app shell, which
+      # react-router then takes over client-side.
+      - name: Add SPA fallback
+        run: cp apps/web/dist/index.html apps/web/dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
