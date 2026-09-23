@@ -5,6 +5,7 @@ import type {
   CreateUnitRequest,
   Incident,
   ResponseUnit,
+  SceneRoute,
   UpdateIncidentStatusRequest,
 } from '@rescue3d/contracts';
 import { apiRequest } from './apiClient';
@@ -38,4 +39,8 @@ export function listAssignmentsForIncident(incidentId: string): Promise<Assignme
 
 export function createAssignment(input: CreateAssignmentRequest): Promise<Assignment> {
   return apiRequest<Assignment>('/assignments', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function getAssignmentRoute(assignmentId: string): Promise<SceneRoute> {
+  return apiRequest<SceneRoute>(`/assignments/${assignmentId}/route`);
 }

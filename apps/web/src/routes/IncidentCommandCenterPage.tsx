@@ -11,6 +11,7 @@ export function IncidentCommandCenterPage(): JSX.Element {
   const [units, setUnits] = useState<ResponseUnit[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [assignmentsVersion, setAssignmentsVersion] = useState(0);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -53,6 +54,7 @@ export function IncidentCommandCenterPage(): JSX.Element {
   async function handleAssignUnit(incidentId: string, unitId: string) {
     await incidentApi.createAssignment({ incidentId, unitId });
     await refresh();
+    setAssignmentsVersion((v) => v + 1);
   }
 
   return (
@@ -76,6 +78,7 @@ export function IncidentCommandCenterPage(): JSX.Element {
               availableUnits={availableUnits}
               onAdvanceStatus={handleAdvanceStatus}
               onAssignUnit={handleAssignUnit}
+              assignmentsVersion={assignmentsVersion}
             />
           ))}
         </div>
