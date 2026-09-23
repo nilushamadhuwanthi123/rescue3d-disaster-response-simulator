@@ -1,0 +1,59 @@
+/*
+ * Rescue3D design tokens: "Obsidian Ember x Bioluminescent Jade".
+ * Dark is the default identity (an incident-command aesthetic); light is a
+ * fully-supported alternate, not an afterthought. `:root` = dark values;
+ * `[data-theme="light"]` overrides them.
+ */
+:root {
+  --r3d-bg-canvas: #0b0d12;
+  --r3d-bg-surface: #12151c;
+  --r3d-bg-surface-raised: #191d26;
+  --r3d-border: #262c38;
+  --r3d-text-primary: #eef1f6;
+  --r3d-text-muted: #9aa3b2;
+
+  --r3d-accent-ember: #ff6a3d;
+  --r3d-accent-ember-muted: #a8451f;
+  --r3d-accent-jade: #2de3a8;
+  --r3d-accent-jade-muted: #1c9c74;
+
+  --r3d-status-danger: #ff4d4f;
+  --r3d-status-warning: #f5a524;
+  --r3d-status-success: #2de3a8;
+
+  --r3d-radius-sm: 6px;
+  --r3d-radius-md: 10px;
+  --r3d-radius-lg: 16px;
+
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  --r3d-bg-canvas: #f5f6f8;
+  --r3d-bg-surface: #ffffff;
+  --r3d-bg-surface-raised: #ffffff;
+  --r3d-border: #dde1e8;
+  --r3d-text-primary: #14171c;
+  --r3d-text-muted: #565f6e;
+
+  --r3d-accent-ember: #d9491f;
+  --r3d-accent-ember-muted: #f0b39c;
+  --r3d-accent-jade: #128a63;
+  --r3d-accent-jade-muted: #9fe9d3;
+
+  --r3d-status-danger: #d9363e;
+  --r3d-status-warning: #b5720a;
+  --r3d-status-success: #128a63;
+
+  color-scheme: light;
+}
+
+/* Reduced-motion is a user-toggleable setting (see ThemeProvider), applied
+   as a data attribute rather than relying only on the media query, so it
+   still works when the OS setting and the in-app setting disagree. */
+[data-reduced-motion='true'] * {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
