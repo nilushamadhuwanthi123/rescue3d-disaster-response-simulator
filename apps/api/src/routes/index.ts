@@ -3,6 +3,7 @@ import authRoutes from './auth.js';
 import incidentRoutes from './incidents.js';
 import unitRoutes from './units.js';
 import assignmentRoutes from './assignments.js';
+import analyticsRoutes from './analytics.js';
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use('/auth', authRoutes);
 router.use('/incidents', incidentRoutes);
 router.use('/units', unitRoutes);
 router.use('/assignments', assignmentRoutes);
+router.use('/analytics', analyticsRoutes);
 
 export default router;

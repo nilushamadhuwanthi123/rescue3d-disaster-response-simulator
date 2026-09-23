@@ -7,6 +7,7 @@ import { Assignment, type AssignmentDocument } from '../models/Assignment.js';
 import { Incident } from '../models/Incident.js';
 import { getUnit } from './UnitService.js';
 import { HttpError } from '../utils/ApiError.js';
+import { recordEvent } from './IncidentEventService.js';
 
 const ACTIVE_STATUSES: AssignmentStatus[] = ['assigned', 'en_route', 'on_scene'];
 
@@ -57,6 +58,8 @@ export async function createAssignment(
     await incident.save();
   }
 
+  await recordEvent(incident._id, 'unit_assigned', `Unit "${unit.name}" assigned to this incident.`);
+
   return toDto(doc);
 }
 
@@ -82,6 +85,8 @@ export async function updateAssignmentStatus(
     unit.status = 'available';
     await unit.save();
   }
+
+  await recordEvent(doc.incidentId, 'assignment_status_changed', `Assignment status changed to "${nextStatus}".`);
 
   return toDto(doc);
 }

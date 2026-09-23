@@ -4,6 +4,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { severityTone } from './severityTone';
 import { AssignedUnits } from './AssignedUnits';
+import { IncidentTimeline } from './IncidentTimeline';
 
 const NEXT_STATUS: Partial<Record<IncidentStatus, IncidentStatus>> = {
   reported: 'dispatched',
@@ -75,6 +76,7 @@ export function IncidentCard({
       </div>
 
       <AssignedUnits incidentId={incident.id} refreshKey={assignmentsVersion} />
+      <IncidentTimeline incidentId={incident.id} refreshKey={assignmentsVersion} />
     </Card>
   );
 }

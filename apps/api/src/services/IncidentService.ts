@@ -1,6 +1,7 @@
 import type { CreateIncidentRequest, Incident as IncidentDto, IncidentStatus } from '@rescue3d/contracts';
 import { Incident, type IncidentDocument } from '../models/Incident.js';
 import { HttpError } from '../utils/ApiError.js';
+import { recordEvent } from './IncidentEventService.js';
 
 // Only forward transitions are allowed, and only along this path — an
 // incident can't jump from "reported" straight to "resolved", and it can
@@ -38,6 +39,7 @@ export async function createIncident(
   reportedBy: string,
 ): Promise<IncidentDto> {
   const doc = await Incident.create({ ...input, reportedBy });
+  await recordEvent(doc._id, 'incident_reported', `Incident reported: "${doc.title}" (${doc.severity}).`);
   return toDto(doc);
 }
 
@@ -75,7 +77,13 @@ export async function updateIncidentStatus(
     );
   }
 
+  const previousStatus = doc.status;
   doc.status = nextStatus;
   await doc.save();
+  await recordEvent(
+    doc._id,
+    'incident_status_changed',
+    `Status changed from "${previousStatus}" to "${nextStatus}".`,
+  );
   return toDto(doc);
 }

@@ -1,9 +1,11 @@
 import type {
+  AnalyticsSummary,
   Assignment,
   CreateAssignmentRequest,
   CreateIncidentRequest,
   CreateUnitRequest,
   Incident,
+  IncidentEvent,
   ResponseUnit,
   SceneRoute,
   UpdateIncidentStatusRequest,
@@ -43,4 +45,12 @@ export function createAssignment(input: CreateAssignmentRequest): Promise<Assign
 
 export function getAssignmentRoute(assignmentId: string): Promise<SceneRoute> {
   return apiRequest<SceneRoute>(`/assignments/${assignmentId}/route`);
+}
+
+export function getIncidentTimeline(incidentId: string): Promise<IncidentEvent[]> {
+  return apiRequest<IncidentEvent[]>(`/incidents/${incidentId}/timeline`);
+}
+
+export function getAnalyticsSummary(): Promise<AnalyticsSummary> {
+  return apiRequest<AnalyticsSummary>('/analytics/summary');
 }
