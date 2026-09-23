@@ -3,6 +3,7 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { severityTone } from './severityTone';
+import { AssignedUnits } from './AssignedUnits';
 
 const NEXT_STATUS: Partial<Record<IncidentStatus, IncidentStatus>> = {
   reported: 'dispatched',
@@ -16,9 +17,17 @@ interface Props {
   availableUnits: ResponseUnit[];
   onAdvanceStatus: (id: string) => void;
   onAssignUnit: (incidentId: string, unitId: string) => void;
+  /** Bumped by the parent whenever assignments for this incident may have changed. */
+  assignmentsVersion: number;
 }
 
-export function IncidentCard({ incident, availableUnits, onAdvanceStatus, onAssignUnit }: Props): JSX.Element {
+export function IncidentCard({
+  incident,
+  availableUnits,
+  onAdvanceStatus,
+  onAssignUnit,
+  assignmentsVersion,
+}: Props): JSX.Element {
   const nextStatus = NEXT_STATUS[incident.status];
 
   return (
@@ -64,6 +73,8 @@ export function IncidentCard({ incident, availableUnits, onAdvanceStatus, onAssi
           <span className="text-xs text-text-muted">No available units</span>
         )}
       </div>
+
+      <AssignedUnits incidentId={incident.id} refreshKey={assignmentsVersion} />
     </Card>
   );
 }
