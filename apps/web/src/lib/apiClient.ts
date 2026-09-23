@@ -8,6 +8,10 @@ export function setAccessToken(token: string | null): void {
   accessToken = token;
 }
 
+export function getAccessToken(): string | null {
+  return accessToken;
+}
+
 export class ApiRequestError extends Error {
   readonly code: string;
   readonly status: number;

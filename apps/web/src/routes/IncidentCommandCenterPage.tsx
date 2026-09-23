@@ -5,6 +5,7 @@ import { SimulationDisclaimer } from '../components/SimulationDisclaimer';
 import { CreateIncidentForm } from './incidents/CreateIncidentForm';
 import { IncidentCard } from './incidents/IncidentCard';
 import * as incidentApi from '../lib/incidentApi';
+import { useRealtimeIncidents } from '../lib/useRealtimeIncidents';
 
 export function IncidentCommandCenterPage(): JSX.Element {
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -33,6 +34,12 @@ export function IncidentCommandCenterPage(): JSX.Element {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Live updates from other operators — no manual refresh button needed.
+  useRealtimeIncidents(() => {
+    refresh();
+    setAssignmentsVersion((v) => v + 1);
+  });
 
   const availableUnits = units.filter((u) => u.status === 'available');
 

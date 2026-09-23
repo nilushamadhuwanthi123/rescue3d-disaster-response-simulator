@@ -2,6 +2,7 @@ import type { CreateIncidentRequest, Incident as IncidentDto, IncidentStatus } f
 import { Incident, type IncidentDocument } from '../models/Incident.js';
 import { HttpError } from '../utils/ApiError.js';
 import { recordEvent } from './IncidentEventService.js';
+import { broadcast } from '../realtime/socketServer.js';
 
 // Only forward transitions are allowed, and only along this path — an
 // incident can't jump from "reported" straight to "resolved", and it can
@@ -40,7 +41,9 @@ export async function createIncident(
 ): Promise<IncidentDto> {
   const doc = await Incident.create({ ...input, reportedBy });
   await recordEvent(doc._id, 'incident_reported', `Incident reported: "${doc.title}" (${doc.severity}).`);
-  return toDto(doc);
+  const dto = toDto(doc);
+  broadcast('incident:created', dto);
+  return dto;
 }
 
 export async function listIncidents(filter: {
@@ -85,5 +88,7 @@ export async function updateIncidentStatus(
     'incident_status_changed',
     `Status changed from "${previousStatus}" to "${nextStatus}".`,
   );
-  return toDto(doc);
+  const dto = toDto(doc);
+  broadcast('incident:updated', dto);
+  return dto;
 }

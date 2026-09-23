@@ -8,6 +8,7 @@ import { Incident } from '../models/Incident.js';
 import { getUnit } from './UnitService.js';
 import { HttpError } from '../utils/ApiError.js';
 import { recordEvent } from './IncidentEventService.js';
+import { broadcast } from '../realtime/socketServer.js';
 
 const ACTIVE_STATUSES: AssignmentStatus[] = ['assigned', 'en_route', 'on_scene'];
 
@@ -60,7 +61,9 @@ export async function createAssignment(
 
   await recordEvent(incident._id, 'unit_assigned', `Unit "${unit.name}" assigned to this incident.`);
 
-  return toDto(doc);
+  const dto = toDto(doc);
+  broadcast('assignment:updated', dto);
+  return dto;
 }
 
 export async function listAssignmentsForIncident(incidentId: string): Promise<AssignmentDto[]> {
@@ -88,5 +91,7 @@ export async function updateAssignmentStatus(
 
   await recordEvent(doc.incidentId, 'assignment_status_changed', `Assignment status changed to "${nextStatus}".`);
 
-  return toDto(doc);
+  const dto = toDto(doc);
+  broadcast('assignment:updated', dto);
+  return dto;
 }
