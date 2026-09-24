@@ -1,17 +1,76 @@
 import { useState, useMemo } from 'react';
 import {
   RESCUE3D_CITY_CONFIG,
+  computeRiskScore,
+  estimateTravelSeconds,
+  pathDistanceMeters,
   type SceneIncidentSnapshot,
   type SceneUnitSnapshot,
   type SceneRoute,
   type SceneDisasterType,
+  type SceneWaypoint,
   type IncidentSeverity,
+  type UnitStatus,
 } from '@rescue3d/contracts';
 import { CitySceneCanvas } from '../scene/CitySceneCanvas';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { SimulationDisclaimer } from '../components/SimulationDisclaimer';
+
+type CityLocationEntry = (typeof RESCUE3D_CITY_CONFIG.locations)[number];
+
+function nodePosition(nodeId: string) {
+  return RESCUE3D_CITY_CONFIG.roadNodes.find((n) => n.id === nodeId)?.position;
+}
+
+/**
+ * A path from one facility's road node to another's, through real nodes of the
+ * city road graph.
+ *
+ * It is not a shortest-path search — this is a simulator, and the honest
+ * description is "the nearest usable node on the way", not "the optimal
+ * route". What it does guarantee is that every waypoint is a node that exists,
+ * and that no waypoint sits on a road the incident has blocked.
+ */
+function buildSceneWaypoints(
+  from: CityLocationEntry,
+  to: CityLocationEntry,
+  blockedRoadIds: string[],
+): SceneWaypoint[] {
+  const start = nodePosition(from.roadNodeId) ?? from.scenePosition;
+  const end = nodePosition(to.roadNodeId) ?? to.scenePosition;
+
+  const blockedNodeIds = new Set(
+    RESCUE3D_CITY_CONFIG.roadEdges
+      .filter((e) => blockedRoadIds.includes(e.id))
+      .flatMap((e) => [e.fromNodeId, e.toNodeId]),
+  );
+
+  const midX = (start.x + end.x) / 2;
+  const midZ = (start.z + end.z) / 2;
+
+  // the usable node closest to the midpoint of the two endpoints
+  const via = RESCUE3D_CITY_CONFIG.roadNodes
+    .filter(
+      (n) =>
+        n.id !== from.roadNodeId && n.id !== to.roadNodeId && !blockedNodeIds.has(n.id),
+    )
+    .sort(
+      (a, b) =>
+        (a.position.x - midX) ** 2 + (a.position.z - midZ) ** 2 -
+        ((b.position.x - midX) ** 2 + (b.position.z - midZ) ** 2),
+    )[0];
+
+  const path: SceneWaypoint[] = [
+    { nodeId: from.roadNodeId, x: start.x, y: 0, z: start.z },
+  ];
+  if (via) {
+    path.push({ nodeId: via.id, x: via.position.x, y: 0, z: via.position.z });
+  }
+  path.push({ nodeId: to.roadNodeId, x: end.x, y: 0, z: end.z });
+  return path;
+}
 
 export function SimulationPage(): JSX.Element {
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>('bldg-metro-tower');
@@ -23,7 +82,10 @@ export function SimulationPage(): JSX.Element {
   // Active scenario state
   const [activeIncident, setActiveIncident] = useState<SceneIncidentSnapshot | null>(null);
   const [activeRoute, setActiveRoute] = useState<SceneRoute | null>(null);
-  const [unitStatus, setUnitStatus] = useState<'available' | 'en_route' | 'arrived'>('available');
+  /* UnitStatus is the domain's own enum, so what this screen shows is the same
+     vocabulary the API and the incident screens use. "on_scene" is the arrival
+     state; there is no separate "arrived". */
+  const [unitStatus, setUnitStatus] = useState<UnitStatus>('available');
   const [logMessages, setLogMessages] = useState<string[]>([
     'System ready. 3D city loaded. Select a target facility and disaster scenario.',
   ]);
@@ -41,7 +103,7 @@ export function SimulationPage(): JSX.Element {
       {
         id: 'unit-fire-1',
         kind: 'fire_truck',
-        status: unitStatus === 'available' ? 'available' : unitStatus === 'en_route' ? 'en_route' : 'arrived',
+        status: unitStatus,
         facilityLocationId: 'facility-fire-station',
       },
       {
@@ -102,27 +164,24 @@ export function SimulationPage(): JSX.Element {
     );
     if (!facility) return;
 
-    // Generate waypoints from facility road node to target road node
-    const waypoints = [
-      {
-        nodeId: facility.roadNodeId,
-        x: facility.scenePosition.x,
-        y: 0,
-        z: facility.scenePosition.z,
-      },
-      {
-        nodeId: 'node-c',
-        x: 0,
-        y: 0,
-        z: (facility.scenePosition.z + selectedLocation.scenePosition.z) / 2,
-      },
-      {
-        nodeId: selectedLocation.roadNodeId,
-        x: selectedLocation.scenePosition.x,
-        y: 0,
-        z: selectedLocation.scenePosition.z,
-      },
-    ];
+    /* Waypoints run through real road nodes from the city config. The
+       intermediate node is the one nearest the straight line between the two
+       facilities and not on a blocked road, rather than an invented midpoint —
+       a waypoint the road graph has never heard of is not a route. */
+    const waypoints = buildSceneWaypoints(
+      facility,
+      selectedLocation,
+      activeIncident.blockedRoadIds,
+    );
+
+    /* Distance, risk and ETA all come from the shared routing model in
+       @rescue3d/contracts — the same functions the API uses to answer
+       GET /api/assignments/:id/route. They were hardcoded here at one point
+       (850 m, 6 s, and a second risk formula), which meant this screen and the
+       incident screens could describe one incident two different ways. */
+    const distanceMeters = Math.round(pathDistanceMeters(waypoints));
+    const riskScore = computeRiskScore(severity);
+    const estimatedSeconds = estimateTravelSeconds(distanceMeters, riskScore);
 
     const route: SceneRoute = {
       assignmentId: `route-${Date.now()}`,
@@ -130,14 +189,14 @@ export function SimulationPage(): JSX.Element {
       incidentId: activeIncident.id,
       status: 'active',
       waypoints,
-      distanceMeters: 850,
-      estimatedSeconds: 6, // 6s animated transit for realistic review
-      riskScore: severity === 'critical' ? 0.8 : severity === 'high' ? 0.6 : 0.3,
+      distanceMeters,
+      estimatedSeconds,
+      riskScore,
       avoidedRoadIds: activeIncident.blockedRoadIds,
     };
 
     setActiveRoute(route);
-    setUnitStatus('en_route');
+    setUnitStatus('dispatched');
     setActiveIncident((prev) => (prev ? { ...prev, status: 'dispatched' } : null));
     addLog(
       `Dispatched ${unit.kind.replace('_', ' ')} from ${facility.displayName} via safe simulated route.`
@@ -163,7 +222,9 @@ export function SimulationPage(): JSX.Element {
             3D City Disaster & Response Simulator
           </h1>
           <p className="text-sm text-text-muted">
-            Kavindu's 3D simulation environment integrated with Nilusha's emergency intelligence contract.
+            Report a disaster at a facility, dispatch a unit, and watch the response play out
+            across the city. Distance, risk and ETA come from the same model the incident
+            screens use.
           </p>
         </div>
 
@@ -209,7 +270,7 @@ export function SimulationPage(): JSX.Element {
                 if (loc) addLog(`Target selected: ${loc.displayName}`);
               },
               onAnimationComplete: (assignmentId) => {
-                setUnitStatus('arrived');
+                setUnitStatus('on_scene');
                 setActiveIncident((prev) => (prev ? { ...prev, status: 'contained' } : null));
                 addLog(`Emergency unit arrived at incident scene! Hazard contained.`);
               },
@@ -358,7 +419,9 @@ export function SimulationPage(): JSX.Element {
                     </div>
                     <div className="flex justify-between mt-1">
                       <span>Unit Transit State:</span>
-                      <span className="font-semibold text-jade capitalize">{unitStatus}</span>
+                      <span className="font-semibold text-jade capitalize">
+                        {unitStatus.replace('_', ' ')}
+                      </span>
                     </div>
                   </div>
                 ) : null}
@@ -366,11 +429,11 @@ export function SimulationPage(): JSX.Element {
                 <Button
                   variant="primary"
                   onClick={handleDispatchUnit}
-                  disabled={unitStatus === 'en_route' || unitStatus === 'arrived'}
+                  disabled={unitStatus === 'dispatched' || unitStatus === 'on_scene'}
                 >
-                  {unitStatus === 'en_route'
+                  {unitStatus === 'dispatched'
                     ? 'Unit En Route...'
-                    : unitStatus === 'arrived'
+                    : unitStatus === 'on_scene'
                     ? 'Unit On Scene (Contained)'
                     : 'Dispatch Recommended Unit'}
                 </Button>
