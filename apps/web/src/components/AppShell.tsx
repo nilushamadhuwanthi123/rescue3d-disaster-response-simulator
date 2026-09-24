@@ -21,6 +21,9 @@ export function AppShell(): JSX.Element {
             <NavLink to="/" end className={NAV_LINK_CLASS}>
               Dashboard
             </NavLink>
+            <NavLink to="/simulation" className={NAV_LINK_CLASS}>
+              3D Simulation
+            </NavLink>
             <NavLink to="/incidents" className={NAV_LINK_CLASS}>
               Incidents
             </NavLink>
