@@ -3,3 +3,6 @@ export * from './api.js';
 export * from './scene.js';
 export * from './incident.js';
 export * from './analytics.js';
+export * from './cityData.js';
+export * from './routing.js';
+

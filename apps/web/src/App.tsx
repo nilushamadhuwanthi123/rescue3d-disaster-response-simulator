@@ -9,6 +9,7 @@ import { DashboardPage } from './routes/DashboardPage';
 import { IncidentCommandCenterPage } from './routes/IncidentCommandCenterPage';
 import { AnalyticsPage } from './routes/AnalyticsPage';
 import { DesignSystemPage } from './routes/DesignSystemPage';
+import { SimulationPage } from './routes/SimulationPage';
 import { useAuthStore } from './store/authStore';
 
 export function App(): JSX.Element {
@@ -27,6 +28,7 @@ export function App(): JSX.Element {
           <Route element={<ProtectedRoute />}>
             <Route element={<AppShell />}>
               <Route path="/" element={<DashboardPage />} />
+              <Route path="/simulation" element={<SimulationPage />} />
               <Route path="/incidents" element={<IncidentCommandCenterPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/design-system" element={<DesignSystemPage />} />

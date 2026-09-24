@@ -1,16 +1,27 @@
-# Frontend/3D Integration Contract
+# Frontend / 3D Integration Contract
 
-This is the seam between Nilusha's incident/routing backend and Kavindu's
-3D disaster-visualization scene. Both sides depend only on the types in
-`packages/contracts/src/scene.ts` (plus `incident.ts` for the incident and
-unit shapes) — neither side should import from the other's app code.
+This document defines the formal contract between Nilusha's incident intelligence & routing backend and Kavindu's 3D disaster-visualization scene. Both sides depend only on the types in `packages/contracts/src/scene.ts` (plus `incident.ts` for incident and unit shapes) — neither side should import from the other's application code.
 
-## What the backend guarantees
+---
+
+## 1. Shared Integration Contract Shapes
+
+| Contract Item | TypeScript Type / Shape | Responsibility |
+|---|---|---|
+| **City Location** | `CityLocation`: `{ locationId, type, displayName, scenePosition: {x, y, z}, roadNodeId }` | Defined in reproducible city configuration. Scene positions map to road node IDs. |
+| **Incident Snapshot** | `SceneIncidentSnapshot`: `{ id, type, severity, locationId, status, affectedLocationIds, blockedRoadIds }` | Backend provides state; 3D scene visualizes localized disaster effects. |
+| **Unit Snapshot** | `SceneUnitSnapshot`: `{ id, kind, status, facilityLocationId, currentLocation?, roadNodeId? }` | Backend tracks unit status; 3D scene renders 3D vehicle model and movement. |
+| **Route Result** | `SceneRoute`: `{ assignmentId, unitId, incidentId, status, waypoints, distanceMeters, estimatedSeconds, riskScore, avoidedRoadIds, noRouteReason? }` | Nilusha calculates simulated safe path; Kavindu renders path and animates unit. |
+| **Scene Actions** | `SceneActions`: `onLocationSelect(locationId)`, `onUnitSelect(unitId)`, `onAnimationComplete(assignmentId)` | 3D scene captures user interactions; application handles state transitions. |
+
+---
+
+## 2. What the Backend Guarantees
 
 `GET /api/assignments/:id/route` returns a `SceneRoute`:
 
 ```ts
-interface SceneRoute {
+export interface SceneRoute {
   assignmentId: string;
   unitId: string;
   incidentId: string;
@@ -20,42 +31,37 @@ interface SceneRoute {
   estimatedSeconds: number;
   riskScore: number; // 0..1, see RoutingService.computeRiskScore
   avoidedRoadIds: string[];
+  noRouteReason?: string;
 }
 ```
 
-- `waypoints` is ordered from the unit's current position to the
-  incident's position. The scene is free to interpolate/animate between
-  consecutive waypoints however it likes; the backend does not assume
-  anything about frame rate or camera behavior.
-- `x`/`z` are longitude/latitude-derived plane coordinates; `y` is
-  reserved for elevation and is currently always `0` (no terrain data
-  yet). If the 3D scene needs a different coordinate convention, that's a
-  conversion the scene layer owns — the contract stays lat/lng-based on
-  the backend side.
-- `status` mirrors the assignment's lifecycle: `ready` (assigned, not yet
-  moving), `active` (en route), `arrived` (on scene), `unavailable`
-  (released or the assignment/unit/incident no longer exists).
-  `rerouting` is reserved for a future branch (dynamic re-routing) and is
-  never emitted yet.
-- **Everything under `packages/contracts/src/scene.ts` is simulated.**
-  `estimatedSeconds` and `riskScore` come from a documented, inspectable
-  formula (`apps/api/src/services/RoutingService.ts`), not a real traffic
-  or road-network model. Any UI built on top of this must keep Rescue3D's
-  simulation disclaimer visible — see `SIMULATION_DISCLAIMER` in
-  `packages/contracts/src/auth.ts`.
+- **Ordered Waypoints:** `waypoints` is ordered from the unit's starting coordinates to the incident location. The scene interpolates/animates between consecutive waypoints along the road network.
+- **Coordinates:** `x`/`z` are plane coordinates mapping to the city grid; `y` is reserved for elevation (default `0`).
+- **Status Lifecycle:** `ready` (assigned, preparing departure), `active` (en route along waypoints), `arrived` (reached incident location), `unavailable` (route blocked or assignment released).
+- **Educational Simulation Notice:** Everything under `packages/contracts/src/scene.ts` is simulated. Travel time and risk scores are derived from deterministic formulas (`RoutingService.ts`), not real emergency navigation data.
 
-## What the 3D scene owns
+---
 
-- Rendering the waypoints as a path, camera movement, unit models,
-  incident markers, terrain/environment — all scene-side concerns the
-  backend has no opinion on.
-- Polling or subscribing to route updates. Branch 3 only adds the
-  request/response endpoint above; live push updates (sockets) are a
-  later branch's scope and will be documented here when they land.
+## 3. What the 3D Scene Owns
 
-## Change process
+- **City Visualization:** Rendering roads, intersections, facilities (Hospital, Fire Station, Rescue Station) and buildings.
+- **Disaster Visuals:**
+  - Fire: Localized flames, smoke particles, affected radius indicator.
+  - Flood: Rising water overlay, blocked road indicators.
+  - Earthquake: Camera shake, building structural damage indicators.
+- **Emergency Vehicles:** 3D models for fire truck, ambulance, and rescue team; animating units along the supplied waypoints.
+- **Scene Quality & Performance:** Responsive WebGL canvas, orbit/pan/zoom camera controls, reset-view button, low-motion fallback mode, and resource cleanup on scenario switch.
 
-Either side can propose a change to a shared type, but it goes through a
-PR that both of us review — this file and `packages/contracts` are the
-one seam where a silent change breaks the other person's code without
-either of us noticing until runtime.
+---
+
+## 4. Integration Checkpoints
+
+- **Checkpoint 1:** A static city with stable IDs and a mock incident payload.
+- **Checkpoint 2:** Incident status drives fire visuals and an assigned vehicle follows supplied waypoints.
+- **Checkpoint 3:** All three disasters and the deployed build use the real API, with a repeatable demo scenario.
+
+---
+
+## 5. Change Process
+
+Either side can propose a change to a shared type, but it goes through a Pull Request that both teammates review. `packages/contracts` and this document represent the seam where changes must remain backward-compatible and explicitly coordinated.
