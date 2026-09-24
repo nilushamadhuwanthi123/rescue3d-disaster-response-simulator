@@ -24,7 +24,7 @@ Nilusha leads the incident intelligence, response workflows, operation dashboard
 
 ### 01 Authentication & Operator Access
 - JWT access tokens with secure refresh token rotation and cookie/header support.
-- User roles (`admin`, `commander`, `operator`, `viewer`) and permission-based route guards.
+- User roles (`administrator`, `coordinator`, `operator`, `analyst`, `viewer`) and permission-based route guards, matching the `UserRole` union in `packages/contracts/src/auth.ts`.
 - Secure password hashing with `bcryptjs` and Zod schema validation.
 
 ### 02 Incident Command Center

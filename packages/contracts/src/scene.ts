@@ -2,6 +2,12 @@
  * Shared contract between Nilusha's backend and Kavindu's 3D scene.
  * See docs/INTEGRATION_CONTRACT.md for the full agreement.
  */
+import type {
+  IncidentSeverity,
+  IncidentStatus,
+  IncidentType,
+  UnitStatus,
+} from './incident.js';
 
 export interface SceneVector3 {
   x: number;
@@ -45,26 +51,39 @@ export interface CityConfig {
   roadEdges: CityRoadEdge[];
 }
 
-export type SceneDisasterType = 'fire' | 'flood' | 'earthquake';
+/**
+ * The subset of IncidentType the 3D city can actually draw. Narrower than the
+ * domain's full list on purpose — a medical or hazmat call has no distinct
+ * visual yet — and tied to IncidentType so it cannot drift into naming a
+ * disaster the rest of the system has never heard of.
+ */
+export type SceneDisasterType = Extract<IncidentType, 'fire' | 'flood' | 'earthquake'>;
 
 export interface SceneIncidentSnapshot {
   id: string;
   type: SceneDisasterType;
-  severity: 'low' | 'moderate' | 'high' | 'critical';
+  /* Severity and status reuse the domain types rather than repeating their
+     values. Spelled out again here, they would silently fall out of step the
+     first time a status was added to the lifecycle. */
+  severity: IncidentSeverity;
+  status: IncidentStatus;
   locationId: string;
-  status: 'reported' | 'dispatched' | 'in_progress' | 'contained' | 'resolved';
   affectedLocationIds: string[];
   blockedRoadIds: string[];
 }
 
 export type SceneUnitKind = 'fire_truck' | 'ambulance' | 'rescue';
 
-export type SceneUnitStatus = 'available' | 'dispatched' | 'en_route' | 'arrived';
-
 export interface SceneUnitSnapshot {
   id: string;
   kind: SceneUnitKind;
-  status: SceneUnitStatus;
+  /* The same UnitStatus the API reports. An earlier draft of this used its
+     own set — available | dispatched | en_route | arrived — which mixed
+     UnitStatus with AssignmentStatus and invented "arrived", so nothing the
+     API could send mapped cleanly onto it. Where the scene needs to know how
+     far along a journey a unit is, that belongs to the route
+     (SceneRouteStatus), not to the unit. */
+  status: UnitStatus;
   facilityLocationId: string;
   currentLocation?: SceneVector3;
   roadNodeId?: string;

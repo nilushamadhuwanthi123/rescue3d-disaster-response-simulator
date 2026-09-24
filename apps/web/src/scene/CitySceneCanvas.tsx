@@ -11,6 +11,34 @@ import {
   type SceneRenderOptions,
 } from '@rescue3d/contracts';
 
+/**
+ * Frees the GPU memory held by everything under `root`.
+ *
+ * Three.js does not do this for you: removing an object from a scene, or
+ * disposing the renderer, drops the JavaScript references but leaves the
+ * geometry buffers, materials and textures allocated on the GPU. In a page
+ * that rebuilds a whole city whenever a quality toggle changes, and a fresh
+ * set of disaster visuals on every scenario, that is a leak with a visible
+ * end: the tab eventually loses its WebGL context.
+ */
+function disposeSceneGraph(root: THREE.Object3D): void {
+  root.traverse((obj) => {
+    const mesh = obj as Partial<THREE.Mesh> & THREE.Object3D;
+    mesh.geometry?.dispose?.();
+
+    const material = mesh.material;
+    if (!material) return;
+    const materials = Array.isArray(material) ? material : [material];
+    for (const mat of materials) {
+      // textures are owned by the material but not freed with it
+      for (const value of Object.values(mat)) {
+        if (value instanceof THREE.Texture) value.dispose();
+      }
+      mat.dispose();
+    }
+  });
+}
+
 interface CitySceneCanvasProps {
   incidents?: SceneIncidentSnapshot[];
   units?: SceneUnitSnapshot[];
@@ -348,6 +376,13 @@ export function CitySceneCanvas({
     return () => {
       window.removeEventListener('resize', handleResize);
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      /* renderer.dispose() releases the WebGL context but not the geometries,
+         materials and textures hanging off the scene graph — those are GPU
+         allocations that survive it. This effect re-runs whenever the quality
+         or motion toggle changes, so without walking the scene here the whole
+         city leaks every time someone ticks a checkbox. */
+      disposeSceneGraph(scene);
+      scene.clear();
       renderer.dispose();
     };
   }, [options.reducedQuality, options.lowMotion]);
@@ -357,8 +392,13 @@ export function CitySceneCanvas({
     const scene = sceneRef.current;
     if (!scene) return;
 
-    // Clear old disaster visual groups
-    disasterGroupsRef.current.forEach((grp) => scene.remove(grp));
+    // Clear old disaster visual groups. Removing a group from the scene only
+    // unlinks it; its geometries and materials stay on the GPU until disposed,
+    // and a fresh set is built on every scenario change.
+    disasterGroupsRef.current.forEach((grp) => {
+      scene.remove(grp);
+      disposeSceneGraph(grp);
+    });
     disasterGroupsRef.current.clear();
 
     // Reset building materials & apply active selections / disasters
