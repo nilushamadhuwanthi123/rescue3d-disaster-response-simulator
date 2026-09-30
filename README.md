@@ -27,9 +27,9 @@ wakes the service and can take up to a minute. That is the plan, not a fault.
 
 ## Screens
 
-Captured from the deployed build.
+Captured from the live deployment.
 
-### Nilusha — incident intelligence and emergency response
+### Authentication
 
 **Sign in**
 
@@ -44,9 +44,63 @@ every server-side field error is shown under the input it belongs to rather than
 one message at the bottom. The rules themselves are pure functions in
 `apps/web/src/lib/authValidation.ts`, covered by unit tests.
 
-> The dashboard, incident command centre and analytics screens sit behind
-> authentication, so they are not in this set yet — they need a signed-in
-> session to capture.
+### Dashboard
+
+[<img src="docs/screenshots/dashboard.png" alt="Rescue3D dashboard" width="100%" />](docs/screenshots/dashboard.png)
+
+Welcome screen with the operator's name, role badge and navigation to all modules.
+
+### 3D Simulation
+
+**Interactive city engine — WebGL 3D**
+
+[<img src="docs/screenshots/3d-simulation.png" alt="Rescue3D 3D city simulation" width="100%" />](docs/screenshots/3d-simulation.png)
+
+The interactive city renders buildings, roads and grid lines with React Three Fiber.
+Reset View and Top-Down controls adjust the camera angle.
+
+**Disaster configuration — select a building, choose disaster type and severity, then trigger**
+
+[<img src="docs/screenshots/3d-simulation-controls.png" alt="Rescue3D 3D simulation controls" width="100%" />](docs/screenshots/3d-simulation-controls.png)
+
+Five target buildings, three disaster types (Fire / Flood / Earthquake) and four
+severity levels (Low / Moderate / High / Critical). The Emergency Dispatch section
+activates once an incident is triggered.
+
+### Incident Command Center
+
+**Report an incident — six incident types**
+
+[<img src="docs/screenshots/incidents.png" alt="Rescue3D incident command center" width="100%" />](docs/screenshots/incidents.png)
+
+Six incident types (fire, flood, earthquake, medical, hazmat, structural) with
+title, description, coordinates and a Report button. Active incidents appear on
+the left as they are created.
+
+**Severity levels**
+
+[<img src="docs/screenshots/incidents-severity.png" alt="Rescue3D incident severity dropdown" width="100%" />](docs/screenshots/incidents-severity.png)
+
+### Analytics & Reports
+
+[<img src="docs/screenshots/analytics.png" alt="Rescue3D analytics dashboard" width="100%" />](docs/screenshots/analytics.png)
+
+KPI cards (Total incidents, Total units, Unit utilization, Avg. time to dispatch)
+and breakdowns by incident status, severity and unit status.
+
+### Design System
+
+[<img src="docs/screenshots/design-system.png" alt="Rescue3D design system" width="100%" />](docs/screenshots/design-system.png)
+
+Color tokens (canvas, surface, surface-raised, ember, jade, danger, warning, success),
+button variants (Primary, Secondary, Danger, Ghost, Disabled) and badge styles.
+
+### Accessibility — theme switcher
+
+[<img src="docs/screenshots/theme-switcher.png" alt="Rescue3D theme switcher" width="100%" />](docs/screenshots/theme-switcher.png)
+
+System / Dark / Light modes. The Low-Motion and Reduced-Quality toggles are also
+available for the 3D viewport.
 
 ## Stack
 
